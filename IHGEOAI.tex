@@ -1,0 +1,267 @@
+% 用xlatex编译
+\documentclass[fleqn,10pt]{IntroToAI} % 10号字体，公式左对齐
+\usepackage{ctex}
+
+\usepackage{graphicx}%
+\usepackage{multirow}%
+\usepackage{amsmath,amssymb,amsfonts,amsthm}%
+\usepackage{mathrsfs,mathptmx}%
+\usepackage{xcolor}%
+\usepackage{textcomp}%
+\usepackage{algorithm}%
+\usepackage{algorithmicx}%
+\usepackage{algpseudocode}%
+\usepackage{listings}%
+\usepackage{array}
+\usepackage{subfigure}
+\usepackage{bigstrut}
+\usepackage{color,soul}
+\usepackage[switch,mathlines]{lineno}
+\usepackage{colortbl}
+\usepackage[justification=centering]{caption}
+\usepackage[export]{adjustbox}
+\captionsetup{labelformat=default,labelsep=space}
+% 设置字体
+\setmainfont{Times New Roman}
+%\setmonofont{Courier New}
+\setsansfont{Arial}
+\setCJKfamilyfont{kai}[AutoFakeBold]{simkai.ttf}
+\newcommand*{\kai}{\CJKfamily{kai}}
+\setCJKfamilyfont{song}[AutoFakeBold]{SimSun}
+\newcommand*{\song}{\CJKfamily{song}}
+\usepackage{lipsum} % dummy 英文
+\usepackage{zhlipsum} % dummy 中文
+\usepackage{hyperref} % 超链接
+\hypersetup{hidelinks,colorlinks,breaklinks=true,urlcolor=color2,citecolor=color1,linkcolor=color1,bookmarksopen=false,pdftitle={Title},pdfauthor={Author}}
+\setlength{\columnsep}{0.55cm} % Distance between the two columns of text
+\setlength{\fboxrule}{0.75pt} % Width of the border around the abstract
+\definecolor{color1}{RGB}{0,0,90} % Color of the article title and sections
+\definecolor{color2}{RGB}{0,20,20} % Color of the boxes behind the abstract and headings
+
+
+
+
+\PaperTitle{IHGEOAI:基于LLM-Agent的T2A智慧医疗地理信息系统开发与实现} 
+
+
+\Authors{qianxi,rong\textsuperscript{1}, 翻译：荣千禧\textsuperscript{1}} % Authors
+\affiliation{\textsuperscript{1}\textit{西南石油大学}} % 原作者信息
+\affiliation{\textsuperscript{2}\textit{地球科学与技术学院}} % 原作者信息
+\affiliation{\textsuperscript{3}\textit{地质工程专业，202422000023}} % 填入你的专业和学号
+\affiliation{*\textbf{通讯作者}: qianxi111@126.com} % Corresponding author
+
+
+
+\Abstract{随着人工智能与地理信息系统（GIS）技术的深度融合，智慧医疗服务在资源可视化、路径导航与信息获取等方面展现出显著优势。本文提出并实现了一种基于 T2S（Text-to-Analyze）理念的智慧医疗地理信息系统 —— IHGEOAI（Intelligent Healthcare and Geospatial Artificial Intelligence）。该系统融合智慧医疗（Intelligent Healthcare）与地理空间人工智能（Geospatial AI）技术，旨在通过大语言模型驱动的空间数据分析与医疗信息处理，提升医疗服务的智能化、精准化与空间可达性。系统采用MCP（Model Context Protocol）架构进行构建，前端基于 Vue 框架实现交互界面，后端以 FastAPI 提供标准化接口服务。Agent 通过 Function Calling 与 MCP 协议对用户请求进行语义解析与任务分发，并调用后端 RestFul 接口集成高德地图 API，实现医疗资源的空间定位与路径导航服务，显著增强资源可达性与响应效率。系统设计基于 LLM-Agent 的能力拓展机制及无需微调模型即能提高模型回复质量的提示词工程（Prompt Engineering），灵活地构建了智能诊疗建议、生理症状分析、医保政策问答等多种 T2A（Text to Analyse） 服务场景。初步测试结果显示，IHGEOAI 系统在医疗导航与资源查询任务中具备良好的响应性能与系统扩展性，为构建智能化、地理空间感知驱动的智慧医疗服务平台提供了有效技术支撑。
+}
+
+\Keywords{LLM, Agent, MCP, Function Calling, Prompt Engineering, T2A, IHGEOAI, Intelligent Healthcare, Geospatial AI, GIS, FastAPI, Vue}
+
+\begin{document}
+\renewcommand{\figurename}{图} 	
+\renewcommand{\tablename}{表} 		
+\flushbottom 
+\maketitle 
+
+\section{引言与系统概述} 
+
+\subsection{研究背景与意义}
+
+在当前智慧医疗快速发展的背景下，如何实现医疗资源的合理调度与精准推送，成为推动“医疗公平化”与“便民服务”落地的关键问题。尤其是在居民面对突发疾病、慢性病管理或健康咨询需求时，快速、直观地获取附近可用医生与医疗机构信息，将大幅提升就诊效率与决策科学性。
+
+传统的医疗资源查询多依赖于文字列表、表格式查询方式，存在空间感知不足、交互性差等问题。借助地理信息系统（GIS）与互联网地图服务，可以实现对医生、医院等空间实体的精准定位与可视化展示，从而提升用户体验与系统响应效率。
+
+\subsection{系统功能概述}
+本系统基于Vue 、 FastAPI框架实现前后端的业务逻辑交互，通过Sqlite实现医疗资源的存储、Prompt Engineering实现Agent的高质量回复，GIS提供基础的地理信息服务，最终在阿里云通义千问QWQ-32B深度思考模型、高德地图API的基础上，构建了面向用户的T2A的智慧医疗地理信息系统，并实现了以下功能。
+
+（1）地图动态加载与定位服务：系统在用户进入界面时加载所在区域地图，并支持定位、缩放与图层切换；
+
+（2）医保药物查询：为用户提供药物的医保状态查询，当用户提问某药物是否为医保药物时，Agent会通过智能感知与调度的方式去利用定义好的工具函数完成数据库的查询，并将结果返回于用户。
+
+（3）医疗建议：用户可通过口语化的形式描述病情，Agent会对其进行智能分析将其转化为专业的医疗术语，进而根据转化后的词条调用数据库查询工具进行字段的模糊匹配，为其推荐医生并附上医生的基本信息。
+
+（4）医生详情信息：用户提问后，Agent会调度数据库查询工具查询关于包含医生姓名、专业科室、职称、专业背景、从业履历等信息的详情；
+
+（5）路径动态规划：用户在提出如“我想去四川大学华西医院”的字样后，agent会智能地调用位置查询工具，查询用户当前所在位置，并在完成位置查询后向用户提交位置信息，供给用户判断位置是否正确，当用户提示无误后，agent将会调用路径规划工具为用户以驾车方式提供路径建议，并在前端完成可视化展示。
+
+\subsection{系统架构与技术实现}
+
+该系统主要依赖前后端分离技术、Sqlite、LLM、Agent、地图API服务，共有五部分组成，系统架构如图1所示。
+
+（1）Frontend:利用Vue.js、GAODEAPI实现用户界面(UI)展示，特别是地图的渲染和交互，接收用户输入（例如，选择地点、输入查询）等，利用LLM-AGENT调用后端API发起分析请求或查询请求。
+
+（2）LLM-AGENT:作为前后端交互的中间层，利用AGENT理解用户的自然语言问题进行意图识别，根据预定义的工具列表，选择合适的工具(后端实现的函数)来获取信息，生成回答，并将可视化结果返回于前端，最终完成T2S的实现。
+
+（3）Database: 基于Sqlite存储核心业务数据供后端业务逻辑实现及前端页面显示，如：成都医院的详细信息（名称、位置、等级、科室、位置等）；药品信息（名称、适应症、用法用量、医保状态等）等等。
+
+（4）API: 基于FastAPI 构建的Web服务，提供RESTful API接口，完成LLM-前端、后端业务逻辑的交互。
+
+（5）Backend :基于GAODEAPI提供的接口服务已实现相关的位置查询、路径规划、可视化渲染等功能。
+
+\begin{figure}
+	\centering
+	\includegraphics[width=0.7\linewidth]{jiagou}
+	\caption[系统架构]{}
+	\label{fig:jiagou}
+\end{figure}
+
+
+\subsection{小结}
+本章围绕 T2S 智慧医疗地理信息系统 IHGEOAI 的“医疗资源查询服务”模块展开，系统性介绍了其研究背景、关键技术路径与整体架构设计。该系统基于 Vue 与 FastAPI 构建前后端解耦的开发框架，采用 MCP（Model Context Protocol）架构实现模型任务管理机制，并融合高德地图 API 以实现精准的空间数据服务。同时，引入大语言模型驱动的 Agent，通过 Function Calling 技术调度系统能力，构建自然语言输入到医疗地理信息服务响应的语义闭环。系统还结合提示词工程（Prompt Engineering）与 T2A 扩展机制，有效提升了多场景下的交互智能性与功能灵活性，具备良好的实用价值、可扩展性与智能化特征。
+%------------------------------------------------
+\section{LLM-AGENT}
+\subsection{概念}
+\subsubsection{大语言模型}
+
+大语言模型（Large Language Models,LLM）是一类基于深度学习的自然语言处理模型，通常采用Transformer结构进行构建，并通过大规模文本数据进行无监督预训练，使其能够掌握语言规律、语义关联、上下文理解等能力。代表性模型包括GPT系列（如GPT-3、GPT-4）、Claude、BERT、GLM等。LLM具备如下特性。
+
+（1）语言生成能力强：可生成流畅自然的文章、回答、摘要等；
+
+（2）多任务泛化能力强：无需专门训练，也能完成摘要、翻译、问答等多种语言任务；
+
+（3）知识推理能力：通过海量语料训练，具备一定“知识存储”和逻辑推理能力；
+
+（4）多轮对话理解：可支持上下文连续对话，记忆与交互性良好。
+
+在本文的智慧医疗系统中，LLM被用于：医疗问答、症状初步分析、政策解读、科室推荐、诊疗建议生成等功能。
+
+\subsubsection{AGENT}
+
+在人工智能领域，Agent（智能体） 是一种能够自主感知环境、作出决策、并采取行动以完成目标任务的系统实体。它的基本组成包括：
+
+（1）感知器（Perception）：感知外部输入（如用户输入、环境状态）；
+
+（2）决策机制（Reasoning）：分析输入信息、进行推理判断；
+
+（3）执行器（Action）：根据决策执行下一步操作（如调用工具、返回结果）；
+
+（4）目标导向（Goal-Oriented）：具备明确目标、任务意识，并可进行自我优化。
+
+在大语言模型时代，LLM-Agent 是指以大语言模型为核心的智能体系统，通过语言理解、知识推理和任务执行能力，实现多轮交互、调用工具、组合任务等能力。
+
+
+\subsubsection{Function Calling }
+Function Calling 是指大语言模型（如 GPT-4、Claude 等）在推理过程中自动识别用户意图，并将自然语言转换为结构化函数调用的能力。
+
+该机制允许模型根据内置或动态注册的函数定义，生成包含函数名与参数的标准化调用请求（如 JSON 结构），由系统后端进行处理并返回结果，再由模型完成自然语言回复。
+
+Function Calling 的核心优势在于：实现“理解 + 执行”的智能闭环，增强模型在信息查询、任务控制、API联动等实际场景中的执行能力，是构建 LLM-Agent 系统的关键技术支撑。
+
+\subsubsection{提示词工程}
+
+提示词工程（Prompt Engineering）是一种针对大语言模型（Large Language Model, LLM）的输入构造方法，旨在通过系统性、结构化的指令设计，引导模型以最优策略完成特定任务。该技术强调“输入即编程”（Prompt is Programming），通过构建任务描述、语境设定、角色扮演等手段，实现对模型行为的精准控制与响应优化。提示词工程作为LLM系统化应用的核心机制之一，广泛应用于问答系统、内容生成、任务规划、代码生成等领域，是实现高效人机交互的重要路径。
+
+本系统所构建的提示词主要由以下五大部分组成。
+
+（1）Profile（角色定义）：用于对指令的初始化，构建AI对医疗及地理位置查询任务的基础认知；
+
+（2）Skills（能力声明）：为AI构建基础职能，使得其可以更好地完成后续工具的调度；
+
+（3）Rules（行为约束）：为AI构建其行为准则，明确AI的回复准则；
+
+（4）Workflows（执行流程）：该模块为提示词的核心，用于指导AI的回复流程，即让AI明确知道什么时候调用工具、调用哪个工具、如何调用工具，并如何更好地根据工具返回的结果对用户进行回复；
+
+（5）OutputFormat（输出格式规范）：规范AI的回复结构，在执行长内容回复时，使其可以按照Markdown列表格式进行输出。
+
+\subsubsection{地理信息系统}
+地理信息系统（Geographic Information System, GIS）是一种集成了计算机软硬件技术、空间信息科学与地理学原理的综合性信息系统，用于采集、存储、管理、分析、建模和可视化地理空间数据。其核心在于将具有空间参考的地理数据（如经纬度、行政区划、地形信息等）与属性信息（如人口、医院等级、交通状况等）进行有机结合，为空间分析、辅助决策、可视化表达提供支持。
+
+GIS系统通常具备以下功能模块：
+
+（1）空间数据采集与管理：通过遥感、GPS、地图绘制等手段获取并组织结构化的地理信息；
+
+（2）空间查询与分析：支持缓冲区分析、可达性分析、路径规划、叠加分析等空间计算；
+
+（3）地图制图与可视化：将抽象的数据以图形、图层等方式可视化呈现；
+
+（4）决策支持与服务发布：为用户提供可交互式的空间信息查询与服务决策辅助平台。
+
+在本系统中，GIS技术作为支撑“智慧医疗”服务的核心平台，承担了医院定位、医生分布、路径导航、区域分析等关键任务，是实现“医疗资源空间智能调度”的技术基础。
+
+
+\subsection{LLM-Agent协同机制}
+
+LLM-Agent 本质上是在大语言模型（如GPT、Claude、GLM等）的基础上，通过加入“工具使用”和“任务规划”能力，构建更具实用性的 AI 任务执行者。
+核心能力包括：
+
+（1）自然语言解析	能理解用户指令和复杂问题
+
+（2）工具调用	可根据任务自动调用外部工具（如数据库查询、API接口、地图服务等）
+
+（3）任务拆解与计划	将复杂问题分解为多个子任务，按逻辑顺序完成
+
+（4）上下文记忆	记住用户的历史对话，形成多轮智能交互
+
+（5）自我反思	对输出结果进行检查与优化（如 ReAct、Reflexion 机制）
+
+
+\subsubsection{MCP}
+ MCP（Model Context Protocol）即模型上下文协议,旨在搭建大模型和外部工具之间的信息传递通道。通过 MCP 协议，开发者不用为每个外部工具编写复杂的接口，例如通过单个的阿里百炼应用也能够接入海量第三方工具，MCP示意如图2所示。
+ 
+
+\subsection{Function Calling 技术流程}
+
+Function Calling（函数调用机制）是大语言模型（LLM）在应用端具备“调用外部工具”能力的关键技术，它允许模型在理解用户意图的基础上，根据预设的函数（工具）描述，动态决定是否调用某一函数，并传入正确的参数，最终将函数返回结果整合入模型的回复内容中，从而实现任务执行的自动化与智能化。
+
+其本质是将传统自然语言生成与结构化函数执行相结合，使得LLM从“回答问题者”进化为具备任务执行能力的智能代理（Agent）。
+
+其技术流程如下所示。
+
+（1）函数定义（Function Schema）：开发者事先定义好一组可调用的函数（如查询医院、规划路径、查医保药品），包括函数名、参数字段及其含义；
+
+（2）自然语言意图识别：用户输入自然语言内容，LLM通过语义理解判断是否需要调用函数；
+
+（3）参数填充（Parameter Extraction）：从用户输入中提取结构化参数，构造函数调用语句；
+
+（4）函数执行：将调用请求传给后端 API 或数据库执行，获取结果；
+
+（5）结果融合（Response Generation）：模型接收函数返回的结果后，将其转化为符合上下文的自然语言回复给用户。
+
+\begin{figure}
+	\centering
+	\includegraphics[width=0.7\linewidth]{MCP}
+	\caption[MCP]{}
+	\label{fig:mcp}
+\end{figure}
+
+\subsection{应用场景}
+
+在本项目“基于LLM-Agent的T2A智慧医疗地理信息系统”中，我们设计并引入了具备智能调度能力的医疗Agent，用于桥接用户意图与GIS地图服务 / 医疗数据查询之间的逻辑通道。实现的应用场景如下所示。
+
+（1）医疗建议 | “我最近头晕，不知道挂哪个科” | Agent 分析意图 → 推荐神经内科 → 返回附近医生列表（地图展示）
+
+（2）路径规划 | “我想从家去最近的三甲医院怎么走” | Agent 获取用户位置 → 调用路径API → 在地图上显示最优路线
+
+（3）医保药品查询 | “高血压的药哪些可以医保报销？” | Agent 理解病症 → 查询医保数据库 → 输出可报销药品清单
+
+技术实现思路如下所示。
+
+（1）输入解析层（LLM解析）：使用大模型分析用户输入意图和关键词；
+
+（2）调度与匹配（智能调度机制）：根据意图匹配对应子任务模块（医生查询、路径规划、药品查询等）；
+
+（3）工具调用与响应：通过Agent调用后端API、地图服务、高德POI接口等；
+
+（4）多轮交互支持：支持继续对话，例如“能帮我预约这个医生吗？”、“路线还有没有避开拥堵的？”等；
+
+\subsection{小结}
+本章节围绕智慧医疗地理信息系统的构建，系统阐述了大语言模型、提示词工程、Agent与地理信息系统的关键概念，LLM-Agent的系统机制、MCP及Function calling 的原理，并据此完成医疗问答、路径规划、药品查询等核心功能的应用场景规划与技术层的实现思路。
+
+\section{系统实现}
+\subsection{地图动态加载与定位服务}
+\subsection{医保药物查询}
+\subsection{医疗建议}
+\subsection{医生详情}
+\subsection{路径规划}
+\subsubsection{小结}
+\phantomsection
+\section*{致谢} 
+
+
+
+%----------------------------------以下为参考文献：在Reference中编辑文献信息----------------------------------------
+\phantomsection
+\bibliographystyle{unsrt}
+\bibliography{Reference}
+
+\end{document} 

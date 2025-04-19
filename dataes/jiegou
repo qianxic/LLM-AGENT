@@ -1,0 +1,73 @@
+--- 数据库: table_total.db 表结构 ---
+
+=== 表: Chinese_medicine ===
+  列名                        类型              允许NULL     默认值             主键
+  ---------------------------------------------------------------------------
+  id                        INTEGER         YES        NULL            YES
+  drug_classification_code  TEXT            YES        NULL            NO
+  drug_classification       TEXT            YES        NULL            NO
+  serial_number             TEXT            YES        NULL            NO
+  drug_name                 TEXT            NO         NULL            NO
+  dosage_form               TEXT            YES        NULL            NO
+  remarks                   TEXT            YES        NULL            NO
+  source                    TEXT            YES        NULL            NO
+  created_at                TIMESTAMP       YES        CURRENT_TIMESTAMP NO
+
+=== 表: Western_medicine ===
+  列名                        类型              允许NULL     默认值             主键
+  ---------------------------------------------------------------------------
+  id                        INTEGER         YES        NULL            YES
+  drug_classification_code  TEXT            YES        NULL            NO
+  drug_classification       TEXT            YES        NULL            NO
+  serial_number             TEXT            YES        NULL            NO
+  drug_name                 TEXT            NO         NULL            NO
+  dosage_form               TEXT            YES        NULL            NO
+  remarks                   TEXT            YES        NULL            NO
+  source                    TEXT            YES        NULL            NO
+  created_at                TIMESTAMP       YES        CURRENT_TIMESTAMP NO
+
+=== 表: doctors ===
+  列名                        类型              允许NULL     默认值             主键
+  ---------------------------------------------------------------------------
+  id                        INTEGER         YES        NULL            YES
+  name                      TEXT            NO         NULL            NO
+  hospital_id               INTEGER         NO         NULL            NO
+  department                TEXT            YES        NULL            NO
+  focused_diseases          TEXT            YES        NULL            NO
+  expertise                 TEXT            YES        NULL            NO
+  introduction              TEXT            YES        NULL            NO
+  education                 TEXT            YES        NULL            NO
+  title                     TEXT            YES        NULL            NO
+  likes                     INTEGER         YES        0               NO
+  source                    TEXT            YES        NULL            NO
+
+  --- 索引 ---
+    idx_doctors_hospital_id   (hospital_id)
+
+  --- 外键 ---
+    列 'hospital_id' 参照表 'hospitals' 的列 'id'
+
+=== 表: hospitals ===
+  列名                        类型              允许NULL     默认值             主键
+  ---------------------------------------------------------------------------
+  id                        INTEGER         YES        NULL            YES
+  name                      TEXT            NO         NULL            NO
+  address                   TEXT            YES        NULL            NO
+  latitude                  REAL            NO         NULL            NO
+  longitude                 REAL            NO         NULL            NO
+  level                     TEXT            YES        NULL            NO
+  type                      TEXT            YES        NULL            NO
+  contact_phone             TEXT            YES        NULL            NO
+  is_insurance_designated   BOOLEAN         YES        0               NO
+  specialties               TEXT            YES        NULL            NO
+  departments               TEXT            YES        NULL            NO
+  bed_count                 INTEGER         YES        NULL            NO
+  official_website          TEXT            YES        NULL            NO
+  data_source               TEXT            YES        NULL            NO
+  last_updated              TIMESTAMP       YES        CURRENT_TIMESTAMP NO
+
+  --- 索引 ---
+    idx_hospitals_level_type  (level, type)
+    idx_hospitals_name        (name)
+    idx_hospitals_location    (latitude, longitude)
+    sqlite_autoindex_hospitals_1 (name) UNIQUE

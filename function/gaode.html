@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GEOAI——基于LLM-AGENT的T2S智慧医疗地理信息系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            height: 100%;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        
+        .container {
+            position: relative;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        .map-container {
+            width: 100%;
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        
+        .sidebar {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 380px;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid #ddd;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            z-index: 10;
+        }
+        
+        .sidebar.collapsed {
+            transform: translateX(380px);
+        }
+        
+        .toggle-chat {
+            position: absolute;
+            top: 50%;
+            left: -40px;
+            width: 40px;
+            height: 40px;
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            border-top-left-radius: 4px;
+            border-bottom-left-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 11;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.2);
+        }
+        
+        .toggle-chat:hover {
+            background-color: #1565c0;
+        }
+        
+        .toggle-chat i {
+            font-size: 20px;
+        }
+        
+        /* 全新的Notion AI风格对话界面 */
+        .ai-assistant-container {
+            position: fixed;
+            right: 30px;
+            bottom: 30px;
+            z-index: 1000;
+        }
+        
+        .ai-assistant-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background-color: #0070f3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: background-color 0.2s ease, transform 0.2s ease;
+            position: relative;
+            z-index: 1002;
+        }
+        
+        .ai-assistant-icon:hover {
+            transform: scale(1.05);
+            background-color: #0059c1;
+        }
+        
+        .ai-assistant-icon i {
+            font-size: 24px;
+            color: white;
+        }
+        
+        .chat-panel {
+            position: absolute;
+            right: 0;
+            bottom: 60px;
+            width: 450px;
+            height: 600px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            transform-origin: bottom right;
+            opacity: 0;
+            transform: scale(0.95);
+            pointer-events: none;
+            z-index: 1001;
+            resize: both;
+            overflow: auto;
+            min-width: 350px;
+            min-height: 450px;
+        }
+        
+        .chat-panel.visible {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: all;
+        }
+        
+        .chat-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .chat-panel-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .chat-panel-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .chat-panel-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #666;
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .chat-panel-actions button:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 0 16px;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 0;
+            scroll-behavior: smooth;
+        }
+        
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        
+        .user-message {
+            background-color: #f0f7ff;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        
+        .bot-message {
+            background-color: #f5f5f5;
+            align-self: flex-start;
+        }
+        
+        .input-container {
+            display: flex;
+            align-items: center;
+            border-top: 1px solid #eaeaea;
+            margin-top: 10px;
+            padding: 12px 0;
+        }
+        
+        .message-input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #eaeaea;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            resize: none;
+            max-height: 120px;
+            min-height: 40px;
+        }
+        
+        .send-button {
+            margin-left: 10px;
+            width: 36px;
+            height: 36px;
+            background-color: #0070f3;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .send-button:hover {
+            background-color: #0059c1;
+        }
+
+        .tool-menu {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 12px 0;
+            border-top: 1px solid #eaeaea;
+            background-color: #f9f9f9;
+            overflow-x: auto;
+            max-height: 120px;
+            opacity: 0;
+            height: 0;
+            transition: all 0.3s ease;
+        }
+        
+        .tool-menu.visible {
+            opacity: 1;
+            height: auto;
+            padding: 12px;
+        }
+        
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        
+        .tool-button {
+            padding: 6px 12px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 14px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        
+        .tool-button:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .processing {
+            color: #888;
+            font-style: italic;
+        }
+        
+        .error-message {
+            color: #d32f2f;
+        }
+        
+        /* 添加这些样式来美化Markdown渲染后的内容 */
+        .bot-message ul, .bot-message ol {
+            margin: 5px 0;
+            padding-left: 20px;
+        }
+        
+        .bot-message p {
+            margin: 5px 0;
+        }
+        
+        .bot-message strong {
+            font-weight: bold;
+        }
+        
+        .bot-message h1, .bot-message h2, .bot-message h3, .bot-message h4 {
+            margin: 10px 0 5px 0;
+        }
+        
+        .bot-message a {
+            color: #1976d2;
+            text-decoration: underline;
+        }
+        
+        .bot-message pre, .bot-message code {
+            background-color: #f5f5f5;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        
+        .bot-message table {
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        
+        .bot-message th, .bot-message td {
+            border: 1px solid #ddd;
+            padding: 6px;
+        }
+        
+        /* "正在思考" 动画效果 - 更平滑的渐变 */
+        @keyframes smooth-pulsate {
+            0% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+            100% { opacity: 0.3; }
+        }
+        
+        .processing::after {
+            content: '...';
+            display: inline-block;
+            vertical-align: bottom;
+            animation: smooth-pulsate 1.5s infinite ease-in-out; /* 使用新动画名和 ease-in-out */
+            margin-left: 4px;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 300px;
+            }
+            .sidebar.collapsed {
+                transform: translateX(300px);
+            }
+        }
+        
+        /* 图标字体 */
+        .material-icons {
+            font-family: 'Material Icons';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px;
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-feature-settings: 'liga';
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* 地图控制面板样式 */
+        .map-control-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            max-height: 300px;
+            width: 250px;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .map-control-panel.visible {
+            display: block;
+        }
+        
+        .map-control-panel h4 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .control-toggle {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 40px;
+            height: 40px;
+            background-color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            z-index: 101;
+        }
+        
+        .control-item {
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .control-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .style-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+        }
+        
+        .style-option {
+            display: flex;
+            align-items: center;
+            margin: 3px 0;
+        }
+        
+        .style-option input {
+            margin-right: 5px;
+        }
+        
+        .style-option span {
+            font-size: 12px;
+            color: #333;
+        }
+        
+        .toggle-switch {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .toggle-switch label {
+            font-size: 12px;
+            color: #333;
+        }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #0070f3;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+        
+        /* Animation Controls Styling */
+        #animation-controls {
+            font-size: 12px;
+        }
+        #animation-controls h4 {
+            margin: 0 0 5px 0;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .ctrl-btn {
+            margin-right: 5px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+            border-radius: 3px;
+        }
+        .ctrl-btn:hover {
+            background-color: #eee;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="map-container">
+            <div id="map"></div>
+            
+
+            
+
+                        </label>
+                </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notion AI 风格助手界面 -->
+        <div class="ai-assistant-container">
+            <!-- 悬浮助手图标 -->
+            <div class="ai-assistant-icon" id="ai-assistant-toggle">
+                <i class="material-icons">psychology</i>
+            </div>
+            
+            <!-- 对话面板 -->
+            <div class="chat-panel" id="chat-panel">
+                <div class="chat-panel-header">
+                    <h3>GEOAI，您的智慧医疗助手</h3>
+                    <div class="chat-panel-actions">
+                        <button id="toggle-tools">
+                            <i class="material-icons">more_horiz</i>
+                        </button>
+                        <button id="close-panel">
+                            <i class="material-icons">close</i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="chat-container">
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="message bot-message">
+您好，我是您的专属医疗小助手，我可以帮您：
+
+**1. 医疗相关：**
+*   根据症状推荐医生
+*   查询药品信息及医保覆盖情况
+*   提供医院和医生的详细信息
+
+**2. 地理与导航：**
+*   查询城市地理位置
+*   规划出行路线
+
+如果您有任何健康方面的问题，或者需要查询地理位置、规划路线等，都可以告诉我您的需求，我会尽力提供帮助。
+                        </div>
+                    </div>
+                    
+                    <div class="input-container">
+                        <textarea class="message-input" id="message-input" placeholder="万事问AI..." rows="1"></textarea>
+                        <button class="send-button" id="send-button">
+                            <i class="material-icons">send</i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 工具菜单 -->
+                <div class="tool-menu" id="tool-menu">
+                    <button class="tool-button" data-query="查询成都市的位置">查询成都位置</button>
+                <button class="tool-button" data-query="成都有哪些医院？">查找成都医院</button>
+                <button class="tool-button" data-query="现在几点了？">查询当前时间</button>
+                    <button class="tool-button" data-query="从春熙路到成都东站怎么走？">查询路线规划</button>
+                    <button class="tool-button" id="locate-me-btn">获取我的位置</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- !! 重要：代理服务器配置必须在加载JS API脚本之前 !! -->
+    <script type="text/javascript">
+        window._AMapSecurityConfig = {
+            serviceHost: "http://localhost/_AMapService",  // 使用localhost指向本地Nginx
+        };
+    </script>
+    <!-- 加载高德地图 JS API -->
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=da1189d364f23db3328471cb0ec61f5d&plugin=AMap.Driving"></script>
+    
+    <script>
+        // 全局变量
+        let map;
+        let markers = [];
+        let infoWindow;
+        let driving; // Driving plugin instance
+        let chatHistory = [];
+        const API_URL = 'http://localhost:8080/api/chat';
+        let sidebarCollapsed = false;
+        let currentUserLat = null;
+        let currentUserLon = null;
+        let currentUserAddress = '未知'; // Default address
+        
+        // 初始化地图
+        function initMap() {
+            console.log("Initializing map...");
+            try {
+            map = new AMap.Map('map', {
+                zoom: 12, // 恢复默认缩放级别
+                zooms: [2, 20], // 缩放级别范围
+                center: [104.06667, 30.66667], // 恢复默认中心点成都
+                features: ['bg', 'road', 'building'], // 初始只显示背景、道路、建筑，隐藏文字和兴趣点
+                mapStyle: 'amap://styles/whitesmoke' // 设置浅色主题，类似聊天窗口
+            });
+                console.log("Map object created:", map);
+            
+            // 添加标准图层
+            map.add(new AMap.TileLayer());
+                console.log("TileLayer added.");
+            
+            // 添加高德默认控件
+                AMap.plugin([
+                'AMap.ToolBar',
+                'AMap.Scale',
+                'AMap.MapType',
+                    'AMap.Geolocation',
+                    'AMap.ControlBar',
+                    'AMap.MoveAnimation',
+                    'AMap.Geocoder' // 添加地理编码插件
+            ], function(){
+                    console.log("Loading map plugins...");
+                    
+                    // 添加比例尺
+                    map.addControl(new AMap.Scale({
+                         position: {
+                            bottom: '30px',
+                            left: '10px'
+                        }
+                    }));
+                    
+                    // 添加工具条，包含缩放、平移等
+                    map.addControl(new AMap.ToolBar({
+                         position: {
+                            left: '10px',
+                            top: '110px'
+                        }
+                    }));
+                    
+                    // 创建定位插件实例，设置为全局对象以便后续使用
+                    window.geolocationControl = new AMap.Geolocation({
+                        enableHighAccuracy: true, // 是否使用高精度定位，默认:true
+                        timeout: 10000,           // 超过10秒后停止定位，默认：无穷大
+                        zoomToAccuracy: true,     // 定位成功后调整地图视野范围使定位位置及精度范围视野内可见，默认：false
+                        buttonPosition: 'LT',     // 定位按钮的停靠位置改为左上角
+                        buttonOffset: new AMap.Pixel(80, 10), // 调整偏移量，放在图层切换旁边
+                        showMarker: true,         // 定位成功后在定位到的位置显示点标记，默认：true
+                        showCircle: false,        // 关闭定位精度圆圈
+                        panToLocation: true,      // 定位成功后将定位到的位置作为地图中心点，默认：true
+                        position: 'LT'            // 定位控件停靠位置改为左上角
+                    });
+                    
+                    // 将定位控件添加到地图上
+                    map.addControl(window.geolocationControl);
+                    
+                    console.log("Map controls added.");
+                    
+                    // 移除之前的 setTimeout 延迟，立即尝试获取用户位置
+                    getUserLocation(); 
+                });
+                
+                // 初始化驾车路线规划
+                driving = new AMap.Driving({
+                    map: map,
+                    // panel: "panel" // Optional: Specify a div ID to display text directions
+                });
+                console.log("AMap.Driving initialized.");
+            
+            // 初始化信息窗体
+            infoWindow = new AMap.InfoWindow({
+                offset: new AMap.Pixel(0, -30)
+            });
+                console.log("InfoWindow initialized.");
+            
+            // 默认添加成都市标记
+            addMarker('成都市', 30.66667, 104.06667);
+                console.log("Default Chengdu marker added.");
+                
+            // 解析初始欢迎消息的Markdown
+            const initialBotMessageElement = chatMessages.querySelector('.bot-message'); // 获取第一个机器人消息
+            if (initialBotMessageElement) {
+                const initialText = initialBotMessageElement.textContent; // 获取原始文本
+                try {
+                    initialBotMessageElement.innerHTML = marked.parse(initialText); // 解析并设置HTML
+                    console.log("Initial bot message parsed as Markdown.");
+                } catch (e) {
+                    console.error("Error parsing initial bot message as Markdown:", e);
+                }
+            }
+                
+            } catch (error) {
+                console.error("Error during map initialization:", error);
+                addMessage("地图初始化失败，请检查网络连接或API Key是否有效。", false, false, true);
+            }
+        }
+        
+        // 添加标记到地图
+        function addMarker(title, latitude, longitude, isCity = true) {
+            console.log(`Adding marker: ${title} at (${latitude}, ${longitude})`);
+            if (!map) {
+                console.error("Map object is not initialized. Cannot add marker.");
+                return null;
+            }
+            // 清除之前的标记（如果需要）
+            if (isCity) {
+                clearMarkers();
+            }
+            
+            const marker = new AMap.Marker({
+                position: [longitude, latitude],
+                title: title,
+                map: map
+            });
+            
+            // 如果是城市，设置不同的样式
+            if (isCity) {
+                marker.setIcon(new AMap.Icon({
+                    size: new AMap.Size(25, 34),
+                    image: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_b.png'
+                }));
+            }
+            
+            marker.on('click', function() {
+                infoWindow.setContent(`<div style="padding:10px;">${title}</div>`);
+                infoWindow.open(map, marker.getPosition());
+            });
+            
+            markers.push(marker);
+            console.log(`Marker ${title} added successfully.`);
+            return marker;
+        }
+        
+        // 清除所有标记
+        function clearMarkers() {
+            console.log("Clearing all markers...");
+            markers.forEach(marker => {
+                marker.setMap(null);
+            });
+            markers = [];
+            console.log("Markers cleared.");
+        }
+        
+        // 定位到指定城市
+        function locateCity(cityName, latitude, longitude) {
+            console.log(`Locating city: ${cityName} at (${latitude}, ${longitude})`);
+             if (!map) {
+                console.error("Map object is not initialized. Cannot locate city.");
+                return;
+            }
+            addMarker(cityName, latitude, longitude);
+            map.setCenter([longitude, latitude]);
+            map.setZoom(12);
+            console.log("Map centered and zoomed to city.");
+        }
+        
+        // 显示医院
+        function showHospitals(cityName, hospitals) {
+             console.log(`Showing ${hospitals.length} hospitals in ${cityName}`);
+             if (!map) {
+                console.error("Map object is not initialized. Cannot show hospitals.");
+                return;
+            }
+            // 先定位到城市
+            const cityLocation = hospitals.length > 0 ? 
+                {latitude: hospitals[0].latitude, longitude: hospitals[0].longitude} : null;
+            
+            if (cityLocation) {
+                map.setCenter([cityLocation.longitude, cityLocation.latitude]);
+                map.setZoom(13);
+                console.log("Map centered and zoomed near hospitals.");
+            } else {
+                console.warn("No valid location found for the first hospital to center map.");
+            }
+            
+            // 添加医院标记
+            hospitals.forEach(hospital => {
+                const marker = addMarker(hospital.name, hospital.latitude, hospital.longitude, false);
+                if (!marker) return; // 如果marker添加失败则跳过
+                
+                // 为医院设置特殊图标
+                marker.setIcon(new AMap.Icon({
+                    size: new AMap.Size(25, 34),
+                    image: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_r.png'
+                }));
+                
+                // 医院详细信息
+                const content = `
+                    <div style="padding:10px;">
+                        <h4>${hospital.name}</h4>
+                        <p>类型: ${hospital.type || '未知'}</p>
+                        <p>等级: ${hospital.level || '未知'}</p>
+                    </div>
+                `;
+                
+                marker.on('click', function() {
+                    infoWindow.setContent(content);
+                    infoWindow.open(map, marker.getPosition());
+                });
+            });
+            
+            addMessage(`已在地图上标记出${hospitals.length}家医院。`);
+        }
+        
+        // 聊天功能
+        const chatMessages = document.getElementById('chat-messages');
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+        
+        function addMessage(text, isUser = false, isProcessing = false, isError = false) {
+            const messageDiv = document.createElement('div');
+            let className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            
+            if (isProcessing) {
+                className += ' processing';
+            }
+            
+            if (isError) {
+                className += ' error-message';
+            }
+            
+            messageDiv.className = className;
+            
+            // 使用Markdown解析（仅对AI回复使用，用户消息保持纯文本）
+            if (!isUser && !isProcessing && !isError) {
+                try {
+                // 设置HTML内容而不是文本内容
+                messageDiv.innerHTML = marked.parse(text);
+                } catch (e) {
+                  console.error("Markdown parsing error:", e);
+                  messageDiv.textContent = text; // 解析失败则显示原始文本
+                }
+            } else {
+                // 用户消息或处理中/错误消息使用纯文本
+                messageDiv.textContent = text;
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            return messageDiv;  // 返回消息元素，以便后续更新
+        }
+        
+        // 处理工具结果
+        function handleToolResults(toolResults) {
+             console.log("Handling tool results:", toolResults);
+             if (!Array.isArray(toolResults)) {
+                 console.error("Invalid toolResults format: expected an array.");
+                 return;
+             }
+            toolResults.forEach(result => {
+                if (result && typeof result === 'object') {
+                if (result.command === 'locate_city') {
+                        if (result.latitude && result.longitude) {
+                            locateCity(result.city || '未知城市', result.latitude, result.longitude);
+                        } else {
+                            console.warn("Missing latitude/longitude for locate_city command.");
+                        }
+                } else if (result.command === 'show_hospitals') {
+                        if (result.hospitals && Array.isArray(result.hospitals)) {
+                             showHospitals(result.city || '未知城市', result.hospitals);
+                        } else {
+                             console.warn("Missing or invalid hospitals array for show_hospitals command.");
+                        }
+                    } else if (result.command === 'plan_route_on_frontend') {
+                        if (result.origin && result.destination) {
+                            const originKeyword = result.origin;
+                            const destinationKeyword = result.destination;
+                            console.log(`Received command to plan route on frontend: ${originKeyword} -> ${destinationKeyword}`);
+
+                            // Optional: Fill the input fields
+                            const originInput = document.getElementById('origin-input');
+                            const destinationInput = document.getElementById('destination-input');
+                            if (originInput) originInput.value = originKeyword;
+                            if (destinationInput) destinationInput.value = destinationKeyword;
+
+                            // Trigger the planning using AMap.Driving
+                            if (!driving) {
+                                addMessage("路线规划服务尚未初始化，请稍后重试", false, false, true);
+                                console.error("AMap.Driving is not initialized.");
+                                return;
+                            }
+
+                            const planningMsg = addMessage(`正在规划从 ${originKeyword} 到 ${destinationKeyword} 的驾车路线...`, false, true);
+
+                            driving.search(
+                                [{ keyword: originKeyword, city: '成都' }, { keyword: destinationKeyword, city: '成都' }], 
+                                function(status, searchResult) {
+                                    // Remove the planning message
+                                    if(planningMsg && chatMessages.contains(planningMsg)) {
+                                        chatMessages.removeChild(planningMsg);
+                                    }
+
+                                    if (status === 'complete') {
+                                        console.log('驾车路线规划完成 (triggered by LLM): ', searchResult);
+                                        // Route is automatically drawn by the driving plugin
+                                        // Optionally add a confirmation message
+                                        addMessage(`已成功规划从 ${originKeyword} 到 ${destinationKeyword} 的路线。`, false, false, false);
+                                    } else if (status === 'no_data') {
+                                        console.log('未找到驾车路线数据 (triggered by LLM)');
+                                        addMessage(`未找到从 ${originKeyword} 到 ${destinationKeyword} 的驾车路线。请检查起点和终点是否准确。`, false, false, true);
+                                    } else { // Handle 'error' status
+                                        console.error('获取驾车数据失败 (triggered by LLM): ', searchResult);
+                                        // Extract error message from searchResult.info if available
+                                        const errorMsg = searchResult && searchResult.info ? searchResult.info : '未知错误'; 
+                                        addMessage(`驾车路线规划失败: ${errorMsg}`, false, false, true);
+                                    }
+                                }
+                            );
+                        } else {
+                            console.warn("Missing origin or destination keyword for plan_route_on_frontend command.", result);
+                            addMessage("收到规划路线指令，但缺少起点或终点信息。", false, false, true);
+                        }
+                    }
+                } else {
+                    console.warn("Received invalid tool result format:", result);
+                }
+            });
+        }
+        
+        // 发送消息到API
+        async function sendToAPI(userMessage) {
+            const processingMsg = addMessage('正在思考', false, true);
+            console.log("Sending message to API:", userMessage);
+
+            // **** 准备要发送的数据 ****
+            const requestData = {
+                message: userMessage,
+                history: chatHistory
+            };
+            // 如果有有效的位置信息，则添加
+            if (currentUserLat !== null && currentUserLon !== null) {
+                requestData.user_latitude = currentUserLat;
+                requestData.user_longitude = currentUserLon;
+                requestData.user_address = currentUserAddress;
+                console.log("Including user location in request:", {lat: currentUserLat, lon: currentUserLon, address: currentUserAddress});
+            }
+            // **************************
+
+            console.log("Current history:", chatHistory);
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    // **** 使用准备好的数据 ****
+                    body: JSON.stringify(requestData)
+                    // **************************
+                });
+                
+                // 调试：记录原始响应状态和头部
+                console.log("API Response Status:", response.status);
+                console.log("API Response Headers:", Object.fromEntries(response.headers.entries()));
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error("API Error Response Text:", errorText);
+                    throw new Error(`API请求失败: ${response.status} - ${errorText}`);
+                }
+                
+                const data = await response.json();
+                console.log("Received data from API:", data);
+                
+                // 替换处理中消息为实际回复
+                chatMessages.removeChild(processingMsg);
+                addMessage(data.response || "(无回复内容)"); // 确保有默认值
+                
+                // 处理工具结果（如显示地点、医院等）
+                if (data.tool_results && data.tool_results.length > 0) {
+                    handleToolResults(data.tool_results);
+                }
+                
+                // 更新聊天历史
+                chatHistory = data.history || []; // 确保history总是数组
+                console.log("Updated chat history:", chatHistory);
+                
+            } catch (error) {
+                console.error("API请求或处理错误:", error);
+                if(processingMsg && chatMessages.contains(processingMsg)) {
+                chatMessages.removeChild(processingMsg);
+                }
+                addMessage(`抱歉，发生了错误: ${error.message}`, false, false, true);
+            }
+        }
+        
+        // 发送消息
+        function sendMessage() {
+            const text = messageInput.value.trim();
+            if (text) {
+                addMessage(text, true);
+                messageInput.value = '';
+                sendToAPI(text);
+            }
+        }
+        
+        // 事件监听
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // 快捷工具按钮
+        document.querySelectorAll('.tool-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const query = button.getAttribute('data-query');
+                if (query) {
+                    messageInput.value = query;
+                    sendMessage();
+                }
+            });
+        });
+        
+        // Helper function to trigger planning programmatically (used by handleToolResults)
+        // Note: This function seems redundant now as the logic is inside handleToolResults.
+        // We should ensure handleToolResults directly uses the logic above.
+        // Let's refine handleToolResults to use the improved error handling directly.
+
+        // Remove or comment out the redundant planRouteFromKeywords function if it's fully replaced by handleToolResults
+        /*
+        function planRouteFromKeywords(originKeyword, destinationKeyword) {
+            // ... (duplicate logic) ...
+        }
+        */
+        
+        // 页面加载时初始化地图
+        window.onload = initMap;
+        
+        // Notion AI 风格的对话界面交互
+        const aiAssistantToggle = document.getElementById('ai-assistant-toggle');
+        const chatPanel = document.getElementById('chat-panel');
+        const closePanel = document.getElementById('close-panel');
+        const toggleTools = document.getElementById('toggle-tools');
+        const toolMenu = document.getElementById('tool-menu');
+        
+        // 用户定位功能
+        function getUserLocation() {
+            const processingMsg = addMessage('正在获取您的位置...', false, true);
+            
+            if (!map || !window.geolocationControl) {
+                if (processingMsg && chatMessages.contains(processingMsg)) {
+                    chatMessages.removeChild(processingMsg);
+                }
+                addMessage("定位服务尚未初始化，请稍后重试", false, false, true);
+                console.error("Geolocation control is not initialized.");
+                return;
+            }
+            
+            // 先清除现有的位置标记
+            clearMarkers();
+            
+            // 获取用户位置
+            window.geolocationControl.getCurrentPosition(function(status, result) {
+                // 移除"正在获取位置"消息
+                if (processingMsg && chatMessages.contains(processingMsg)) {
+                    chatMessages.removeChild(processingMsg);
+                }
+                
+                if (status === 'complete') {
+                    const position = result.position;
+                    console.log('定位成功', position);
+                    
+                    // **** 更新全局变量 ****
+                    currentUserLat = position.lat;
+                    currentUserLon = position.lng;
+                    // *********************
+
+                    // 添加标记到用户位置
+                    const userMarker = addMarker('您的位置', position.lat, position.lng, false);
+                    
+                    // 定位到用户位置
+                    map.setCenter([position.lng, position.lat]);
+                    map.setZoom(15); // 设置较高的缩放级别以便看清周围环境
+                    
+                    // 获取地理编码（地址信息）并更新全局变量
+                    const geocoder = new AMap.Geocoder();
+                    geocoder.getAddress([position.lng, position.lat], function(geoStatus, geoResult) {
+                        if (geoStatus === 'complete' && geoResult.regeocode) {
+                            const address = geoResult.regeocode.formattedAddress;
+                            console.log('反向地理编码成功:', address);
+                            // **** 更新全局地址 ****
+                            currentUserAddress = address;
+                            // *********************
+
+                            // 更新位置标记的信息窗体
+                            if (userMarker) {
+                                const content = `<div style="padding:10px;">您的位置<br>${address}</div>`;
+                                infoWindow.setContent(content); // 设置内容
+                                // 点击时才打开 InfoWindow
+                                userMarker.off('click'); // 先移除旧监听器以防重复
+                                userMarker.on('click', function() {
+                                    infoWindow.open(map, userMarker.getPosition());
+                                });
+                                // 可以在定位成功时也短暂打开一次
+                                infoWindow.open(map, userMarker.getPosition());
+                                setTimeout(() => { if(infoWindow.getIsOpen()) infoWindow.close(); }, 3000); // 3秒后自动关闭
+                            }
+                        } else {
+                            console.error('反向地理编码失败:', geoResult);
+                            currentUserAddress = `经度 ${position.lng.toFixed(4)}, 纬度 ${position.lat.toFixed(4)}`; // Fallback
+                        }
+                    });
+                } else {
+                    // 定位失败
+                    console.error('定位失败', result);
+                    // 清除可能存在的旧位置信息
+                    currentUserLat = null;
+                    currentUserLon = null;
+                    currentUserAddress = '未知';
+                    if (result.message.indexOf('Geolocation permission denied') !== -1 || 
+                        result.message.indexOf('position unavailable') !== -1) {
+                        // 用户拒绝了位置权限或位置不可用
+                        addMessage("无法获取您的位置，请确保已授予位置权限，并且GPS或位置服务已开启。", false, false, true);
+                    } else {
+                        // 其他错误
+                        addMessage(`定位失败: ${result.message}`, false, false, true);
+                    }
+                }
+            });
+        }
+        
+        // 添加定位按钮点击事件
+        document.getElementById('locate-me-btn').addEventListener('click', function() {
+            getUserLocation();
+        });
+        
+        // 点击助手图标打开面板
+        aiAssistantToggle.addEventListener('click', () => {
+            chatPanel.classList.toggle('visible');
+            
+            // 如果打开面板，确保滚动到最新消息
+            if (chatPanel.classList.contains('visible')) {
+                setTimeout(() => {
+                    const chatMessages = document.getElementById('chat-messages');
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }, 300);
+            }
+            
+            // 地图自适应
+            if (map) {
+                setTimeout(() => map.resize(), 300);
+            }
+        });
+        
+        // 关闭面板
+        closePanel.addEventListener('click', () => {
+            chatPanel.classList.remove('visible');
+            toolMenu.classList.remove('visible');
+        });
+        
+        // 切换工具菜单
+        toggleTools.addEventListener('click', () => {
+            toolMenu.classList.toggle('visible');
+        });
+        
+        // 修改消息输入框，自动调整高度
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+        
+        // 地图控制面板功能
+        const mapControlToggle = document.getElementById('map-control-toggle');
+        const mapControlPanel = document.getElementById('map-control-panel');
+        const labelToggle = document.getElementById('label-toggle');
+        
+        // 控制面板显示/隐藏
+        mapControlToggle.addEventListener('click', function() {
+            mapControlPanel.classList.toggle('visible');
+        });
+        
+        // 文字标记开关
+        labelToggle.addEventListener('change', function() {
+            if (map) {
+                map.setFeatures(this.checked ? 
+                    ['bg', 'building', 'road', 'point', 'label'] : 
+                    ['bg', 'building', 'road', 'point']);
+            }
+        });
+    </script>
+</body>
+</html>
