@@ -11,7 +11,7 @@ LLM-AGENT/
 │   └── ...
 └── READEME.MD               # 项目说明文件
 
-直接在star.py运行即可，运行前需参考高德设置设置代理服务器，链接：https://lbs.amap.com/api/javascript-api-v2/guide/abc/jscode
+直接在function中的main.py运行即可，运行前需参考高德设置设置代理服务器，链接：https://lbs.amap.com/api/javascript-api-v2/guide/abc/jscode
 默认转发端口为8080，网址主链接为：http://127.0.0.1:8080/
 基于fastapi框架构建模型交互接口，api交互文档链接为：http://127.0.0.1:8080/api/docs#/
 
@@ -24,6 +24,9 @@ https://help.aliyun.com/zh/model-studio/qwq?spm=a2c4g.11186623.0.0.3330429eateA8
 API参考
 https://help.aliyun.com/zh/model-studio/use-qwen-by-calling-api?spm=5176.29619931.J_0p4alxzoxDplpQPpY27Hs.2.c047521cJGOBPN 
 
+
+GIThub
+https://github.com/qianxic/LLM-AGENT
 
 1. 可用工具总结 (Available Tools Summary)
    AI (LLM) 可以根据用户的意图，决定调用后端定义的一系列工具（函数）来获取信息或执行特定操作。这些工具及其对应的后端处理逻辑如下：
