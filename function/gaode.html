@@ -605,10 +605,11 @@
         </div>
     </div>
 
-    <!-- !! 重要：代理服务器配置必须在加载JS API脚本之前 !! -->
+    <!-- !! 重要：安全密钥配置必须在加载JS API脚本之前 !! -->
     <script type="text/javascript">
         window._AMapSecurityConfig = {
-            serviceHost: "http://localhost/_AMapService",  // 使用localhost指向本地Nginx
+            securityJsCode: "16131aa1ae447ba9e2159bda1b08de32", // 添加您的安全密钥
+            // serviceHost: "http://localhost/_AMapService", // 移除或注释掉这行，除非您有特定的本地代理设置
         };
     </script>
     <!-- 加载高德地图 JS API -->
@@ -807,6 +808,10 @@
                 console.warn("No valid location found for the first hospital to center map.");
             }
             
+            // --- 新增：在添加新医院标记前，先清除地图上所有旧标记 --- 
+            clearMarkers();
+            // ------------------------------------------------------
+
             // 添加医院标记
             hospitals.forEach(hospital => {
                 const marker = addMarker(hospital.name, hospital.latitude, hospital.longitude, false);
@@ -916,6 +921,10 @@
                             }
 
                             const planningMsg = addMessage(`正在规划从 ${originKeyword} 到 ${destinationKeyword} 的驾车路线...`, false, true);
+
+                            // --- 新增：在规划新路线前，清除地图上所有标记 --- 
+                            clearMarkers();
+                            // --------------------------------------------------
 
                             driving.search(
                                 [{ keyword: originKeyword, city: '成都' }, { keyword: destinationKeyword, city: '成都' }], 
