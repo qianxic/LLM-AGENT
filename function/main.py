@@ -15,11 +15,33 @@ from typing import List, Optional, Dict, Any
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 
-app = FastAPI()
+# 定义项目根目录，便于后续路径操作
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-@app.get("/favicon.ico")
+app = FastAPI()
+'''
+http://localhost:8081/api/docs swagerUI文档
+http://localhost:8081/api/redoc redoc文档
+
+
+'''
+@app.get("/favicon.ico", include_in_schema=False)
 def favicon():
-    return FileResponse("static/favicon.ico")
+    # Construct the absolute path to favicon.ico relative to this script file
+    favicon_path = os.path.join(BASE_DIR, "favicon.ico")
+    if os.path.exists(favicon_path):
+        return FileResponse(favicon_path, media_type='image/vnd.microsoft.icon') # Specify media type
+    else:
+        # Log or raise a more specific error if needed, but returning 404 is standard
+        logger.error(f"Favicon file not found at expected path: {favicon_path}")
+        try:
+            # Try returning the response, FileResponse handles non-existence
+            return FileResponse(favicon_path, media_type='image/vnd.microsoft.icon')
+        except Exception as e:
+             # This catch is broad, ideally FileResponse handles 404 internally
+             # If it reaches here, something else might be wrong.
+             logger.error(f"Error serving favicon from {favicon_path}: {e}")
+             raise HTTPException(status_code=404, detail="Favicon not found")
 
 # 导入数据库工具函数
 from database_utils import (
@@ -90,19 +112,6 @@ CITY_LOCATIONS = {
     "南京": {"latitude": 32.0584, "longitude": 118.7965},
 }
 
-# 医院数据库 (示例数据) - 不再使用，将从数据库查询
-# HOSPITALS = {
-#     "成都": [
-#         {"name": "四川大学华西医院", "latitude": 30.6424, "longitude": 104.0652, "level": "三级甲等", "type": "综合医院"},
-#         {"name": "成都市第一人民医院", "latitude": 30.6580, "longitude": 104.0647, "level": "三级甲等", "type": "综合医院"},
-#         {"name": "成都市第二人民医院", "latitude": 30.6275, "longitude": 104.0434, "level": "三级甲等", "type": "综合医院"},
-#         {"name": "成都中医药大学附属医院", "latitude": 30.6608, "longitude": 104.0394, "level": "三级甲等", "type": "中医医院"}
-#     ],
-#     "北京": [
-#         {"name": "北京协和医院", "latitude": 39.9123, "longitude": 116.4171, "level": "三级甲等", "type": "综合医院"},
-#         {"name": "北京大学第三医院", "latitude": 39.9827, "longitude": 116.3550, "level": "三级甲等", "type": "综合医院"}
-#     ]
-# }
 
 # LLM客户端 - 如果没有设置环境变量，请直接提供API Key
 try:
@@ -149,7 +158,6 @@ def _get_coords(location_name, city="成都"):
         logger.error(f"Error processing geocoding response for '{location_name}': {e}")
         return None
 
-# --- 定义可用工具 (移除了 get_driving_directions) --- #
 tools = [
     {
         "type": "function",
@@ -842,22 +850,20 @@ async def read_root():
     - 查询当前时间
     - 在地图上查看查询结果
     """
-    # 直接使用硬编码的绝对路径进行测试
-    file_path = r"D:\代码\ESRI\LLM-AGENT\function\gaode.html" 
+    # 使用相对路径，基于当前脚本文件的目录
+    file_path = os.path.join(BASE_DIR, "gaode.html")
     
     # 检查文件是否存在
     if not os.path.exists(file_path):
-        logger.error(f"硬编码路径检查：找不到 gaode.html 文件，尝试路径: {file_path}")
-        # 如果硬编码路径也找不到，那问题可能更复杂
-        raise HTTPException(status_code=404, detail=f"硬编码路径检查：找不到 gaode.html 文件，尝试路径: {file_path}")
+        logger.error(f"找不到 gaode.html 文件，尝试路径: {file_path}")
+        raise HTTPException(status_code=404, detail=f"找不到 gaode.html 文件: {file_path}")
         
-    logger.info(f"使用硬编码路径找到文件: {file_path}")
+    logger.info(f"找到HTML文件: {file_path}")
     return FileResponse(file_path)
 
 # 挂载静态文件目录(确保路径相对于脚本目录)
 # 将挂载点指向脚本所在的目录，这样 gaode.html 也能通过 /static/gaode.html 访问（虽然我们直接在根目录提供）
-static_dir = os.path.dirname(os.path.abspath(__file__))
-main.mount("/static", StaticFiles(directory=static_dir), name="static")
+main.mount("/static", StaticFiles(directory=BASE_DIR), name="static")
 
 @main.get("/api", tags=["文档"],
          summary="API信息",
@@ -876,4 +882,4 @@ async def api_info():
     }
 
 if __name__ == "__main__":
-    uvicorn.run("main:main", host="127.0.0.1", port=8080, reload=True)
+    uvicorn.run("main:main", host="127.0.0.1", port=8081, reload=True)

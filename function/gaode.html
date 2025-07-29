@@ -622,7 +622,7 @@
         let infoWindow;
         let driving; // Driving plugin instance
         let chatHistory = [];
-        const API_URL = 'http://localhost:8080/api/chat';
+        const API_URL = 'http://localhost:8081/api/chat';
         let sidebarCollapsed = false;
         let currentUserLat = null;
         let currentUserLon = null;
@@ -938,7 +938,6 @@
                                         console.log('驾车路线规划完成 (triggered by LLM): ', searchResult);
                                         // Route is automatically drawn by the driving plugin
                                         // Optionally add a confirmation message
-                                        addMessage(`已成功规划从 ${originKeyword} 到 ${destinationKeyword} 的路线。`, false, false, false);
                                     } else if (status === 'no_data') {
                                         console.log('未找到驾车路线数据 (triggered by LLM)');
                                         addMessage(`未找到从 ${originKeyword} 到 ${destinationKeyword} 的驾车路线。请检查起点和终点是否准确。`, false, false, true);
@@ -1058,17 +1057,7 @@
             });
         });
         
-        // Helper function to trigger planning programmatically (used by handleToolResults)
-        // Note: This function seems redundant now as the logic is inside handleToolResults.
-        // We should ensure handleToolResults directly uses the logic above.
-        // Let's refine handleToolResults to use the improved error handling directly.
 
-        // Remove or comment out the redundant planRouteFromKeywords function if it's fully replaced by handleToolResults
-        /*
-        function planRouteFromKeywords(originKeyword, destinationKeyword) {
-            // ... (duplicate logic) ...
-        }
-        */
         
         // 页面加载时初始化地图
         window.onload = initMap;

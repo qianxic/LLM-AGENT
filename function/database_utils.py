@@ -60,34 +60,34 @@ def query_hospitals_by_city(city_name: str):
     return hospitals
 
 def query_doctors_by_specialty_or_expertise(query: str, limit=5):
-    """(初筛) 根据科室、专长或症状关键词查询医生及其医院信息，返回简要列表。"""
+    """(初筛) 根据科室关键词查询医生及其医院信息，返回简要列表。"""
     conn = get_db_connection()
     doctors_with_hospitals = []
     if conn:
         try:
             cursor = conn.cursor()
             # 查询 doctors 表，并通过 hospital_id 连接 hospitals 表
-            # 同时在 department 和 expertise 列中进行模糊匹配
+            # 仅在 department 列中进行模糊匹配，并返回基本信息
             sql = """
             SELECT 
-                d.id AS doctor_id, -- 返回医生ID
+                d.id AS doctor_id, 
                 d.name AS doctor_name,
                 d.department,
-                d.expertise,
+                d.title,
                 h.name AS hospital_name
             FROM doctors d
             JOIN hospitals h ON d.hospital_id = h.id
-            WHERE d.department LIKE ? OR d.expertise LIKE ? OR d.introduction LIKE ? OR d.focused_diseases LIKE ?
+            WHERE d.department LIKE ?
             LIMIT ?
             """
             search_term = f'%{query}%'
-            logger.info(f"Executing SQL for doctors with query: {query} (LIMIT {limit})")
-            cursor.execute(sql, (search_term, search_term, search_term, search_term, limit))
+            logger.info(f"Executing SQL for doctors by department: {query} (LIMIT {limit})")
+            cursor.execute(sql, (search_term, limit))
             rows = cursor.fetchall()
             doctors_with_hospitals = [dict(row) for row in rows]
-            logger.info(f"Found {len(doctors_with_hospitals)} doctors matching '{query}'")
+            logger.info(f"Found {len(doctors_with_hospitals)} doctors matching department '{query}'")
         except sqlite3.Error as e:
-            logger.error(f"Error querying doctors for '{query}': {e}")
+            logger.error(f"Error querying doctors by department '{query}': {e}")
         finally:
             conn.close()
     else:

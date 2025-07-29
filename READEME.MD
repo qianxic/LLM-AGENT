@@ -1,6 +1,6 @@
 LLM-AGENT/
-├── function/                     # 主要的应用代码目录
-│   └── stat.py               # FastAPI 后端主程序
+├── function/                # 主要的应用代码目录
+│   └── stat.py              # FastAPI 后端主程序
 │   └── gaode.html           # 前端 HTML 界面 (假设与 app.py 在同一目录)
 │   └── database_utils.py    # 数据库操作工具函数 (假设与 app.py 在同一目录)
 │   └── requirements.txt     # Python 依赖文件 (假设与 app.py 在同一目录)
