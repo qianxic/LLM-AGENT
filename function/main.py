@@ -113,14 +113,19 @@ CITY_LOCATIONS = {
 }
 
 
-# LLM客户端 - 如果没有设置环境变量，请直接提供API Key
+# LLM客户端 - 从环境变量读取API密钥
 try:
-    api_key = os.getenv("DASHSCOPE_API_KEY") 
-    client = OpenAI(
-        api_key=api_key,
-        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-    )
-    logger.info("OpenAI 客户端初始化成功")
+    api_key = os.getenv("DASHSCOPE_API_KEY")
+    
+    if not api_key:
+        logger.error("API密钥未设置，请设置环境变量 DASHSCOPE_API_KEY")
+        client = None
+    else:
+        client = OpenAI(
+            api_key=api_key,
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+        )
+        logger.info("OpenAI 客户端初始化成功")
 except Exception as e:
     logger.error(f"OpenAI 客户端初始化失败: {e}")
     client = None
